@@ -283,6 +283,12 @@ ShellRoot {
         property string label
         property bool hot: false
         property real tilt: -3
+        // icon only (label hidden) when the bar runs out of room; hot chips keep their label
+        property bool compact: false
+        // width the label adds when shown, so the bar can work out what fits
+        readonly property real labelExtra: label !== "" ? lbl.implicitWidth + row.spacing : 0
+        // width with the label shown, independent of compact (no binding loop)
+        readonly property real fullWidth: 22 + (icon !== "" ? ic.implicitWidth : 0) + labelExtra
         signal clicked(var mouse)
         signal scrolled(int delta)
 
@@ -304,13 +310,14 @@ ShellRoot {
             spacing: 4
 
             Icon {
+                id: ic
                 visible: chip.icon !== ""
                 text: chip.icon
                 color: chip.hot || area.containsMouse ? root.paper : root.red
             }
             Ransom {
                 id: lbl
-                visible: chip.label !== ""
+                visible: chip.label !== "" && (!chip.compact || chip.hot)
                 text: chip.label
                 size: 17
             }
@@ -594,8 +601,31 @@ ShellRoot {
 
                 // right: tray, network/bluetooth, volume, battery, power
                 RowLayout {
+                    id: rightRow
                     anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: 4 }
                     spacing: 16
+
+                    // never reach the clock: drop chip labels (bluetooth, then wifi, then volume)
+                    // until the row fits right of the red slash
+                    readonly property var squeezable: [btChip, netChip, volChip]
+                    readonly property real room: parent.width - (clockSlash.x + clockSlash.width) - 14
+                    readonly property var chips: [netChip, btChip, volChip, batChip]
+                    // width the row needs with every label shown, built from parts (not implicitWidth)
+                    readonly property real fullWidth: {
+                        const shown = chips.filter(c => c.visible);
+                        const n = SystemTray.items.values.length + shown.length + 1;
+                        return SystemTray.items.values.length * 26 + shown.reduce((a, c) => a + c.fullWidth, 0)
+                            + powerBox.implicitWidth + spacing * (n - 1);
+                    }
+                    readonly property int squeeze: {
+                        let w = fullWidth, n = 0;
+                        for (const c of squeezable) {
+                            if (w <= room) break;
+                            if (c.visible && !c.hot) w -= c.labelExtra;
+                            n++;
+                        }
+                        return n;
+                    }
 
                     Repeater {
                         model: SystemTray.items
@@ -631,6 +661,8 @@ ShellRoot {
 
                     // wifi: left click = network settings, right click = wifi on/off
                     Chip {
+                        id: netChip
+                        compact: rightRow.squeeze >= 2
                         readonly property var devs: Networking.devices.values
                         readonly property var wired: devs.find(d => d.type === DeviceType.Wired && d.connected)
                         readonly property var wifiNet: {
@@ -659,6 +691,8 @@ ShellRoot {
 
                     // bluetooth: left click = bluetooth settings, right click = adapter on/off
                     Chip {
+                        id: btChip
+                        compact: rightRow.squeeze >= 1
                         readonly property var adapter: Bluetooth.defaultAdapter
                         readonly property var conn: adapter ? adapter.devices.values.filter(d => d.connected) : []
                         visible: adapter !== null
@@ -677,6 +711,8 @@ ShellRoot {
                     }
 
                     Chip {
+                        id: volChip
+                        compact: rightRow.squeeze >= 3
                         readonly property var audio: Pipewire.defaultAudioSink?.audio
                         readonly property int pct: Math.round((audio?.volume ?? 0) * 100)
                         tilt: -3
@@ -695,6 +731,7 @@ ShellRoot {
                     }
 
                     Chip {
+                        id: batChip
                         readonly property var dev: UPower.displayDevice
                         readonly property int pct: Math.round((dev?.percentage ?? 0) * (dev?.percentage > 1 ? 1 : 100))
                         readonly property bool charging: dev?.state === UPowerDeviceState.Charging || dev?.state === UPowerDeviceState.FullyCharged
@@ -706,6 +743,7 @@ ShellRoot {
                     }
 
                     Item {
+                        id: powerBox
                         implicitWidth: 58
                         implicitHeight: root.barHeight + 2
                         scale: powerArea.containsMouse ? 1.12 : 1
