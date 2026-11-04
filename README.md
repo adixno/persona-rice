@@ -4,7 +4,7 @@ A red / black / white, punk-collage Linux rice inspired by the *Persona* series 
 
 Built on **Hyprland + [Caelestia shell](https://github.com/caelestia-dots/shell) + Quickshell**. The terminal greeting works on its own on any distro.
 
-> Fan-made and unofficial. Not affiliated with or endorsed by Atlus or SEGA. Every graphic here is original and drawn in code. It contains no game assets.
+> Fan-made and unofficial. Not affiliated with or endorsed by Atlus or SEGA. Every graphic here is original and drawn in code. It contains no game assets. (The album art in the lock screen screenshot is just whatever Spotify was playing; it isn't part of the rice.)
 
 ![terminal](preview/terminal.jpg)
 
