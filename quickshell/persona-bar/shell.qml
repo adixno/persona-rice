@@ -10,6 +10,8 @@ import Quickshell.Widgets
 import Quickshell.Services.SystemTray
 import Quickshell.Services.Pipewire
 import Quickshell.Services.UPower
+import Quickshell.Networking
+import Quickshell.Bluetooth
 
 ShellRoot {
     id: root
@@ -78,6 +80,14 @@ ShellRoot {
 
     function caelestia(args: list<string>): void {
         Quickshell.execDetached(["caelestia", ...args]);
+    }
+
+    // open Caelestia's settings on a page; needs the openPage IPC from caelestia-patches.py,
+    // falls back to the plain settings window if the patched copy isn't running
+    function openSettings(page: string): void {
+        Quickshell.execDetached(["sh", "-c",
+            'if qs -c caelestia ipc show 2>/dev/null | grep -q "openPage"; then caelestia shell nexus openPage "$1"; else caelestia shell nexus open; fi',
+            "sh", page]);
     }
 
     PwObjectTracker {
@@ -227,6 +237,45 @@ ShellRoot {
         verticalAlignment: Text.AlignVCenter
     }
 
+    // Tilted card drawn as a vector path so its edges stay smooth at fractional scaling
+    // (rotated Rectangles look jagged at 1.5x). Fill, inner border and a hard offset shadow.
+    // The Shape sits inside a plain Item so the shadow never feeds back into the size.
+    component Card: Item {
+        id: card
+        property real tilt: 0
+        property color fill: root.ink
+        property color outline: root.paper
+        property real outlineWidth: 3
+        property color shadow: root.red
+        property real shadowOffset: 4
+
+        // corners of the item rect rotated by `tilt` around its centre, inset by `inset`, then moved by (dx, dy)
+        function box(inset: real, dx: real, dy: real): var {
+            const a = tilt * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+            const cx = width / 2, cy = height / 2, hw = width / 2 - inset, hh = height / 2 - inset;
+            const pts = [[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh], [-hw, -hh]];
+            return pts.map(p => Qt.point(cx + p[0] * c - p[1] * s + dx, cy + p[0] * s + p[1] * c + dy));
+        }
+
+        Shape {
+            anchors.fill: parent
+            preferredRendererType: Shape.CurveRenderer
+
+            ShapePath {
+                fillColor: card.shadow
+                strokeWidth: -1
+                PathPolyline { path: card.box(0, card.shadowOffset, card.shadowOffset) }
+            }
+            ShapePath {
+                fillColor: card.fill
+                strokeColor: card.outlineWidth > 0 ? card.outline : "transparent"
+                strokeWidth: card.outlineWidth > 0 ? card.outlineWidth : -1
+                joinStyle: ShapePath.MiterJoin
+                PathPolyline { path: card.box(card.outlineWidth / 2, 0, 0) }
+            }
+        }
+    }
+
     // Tilted sticker chip: black card, white border, red offset shadow
     component Chip: Item {
         id: chip
@@ -239,27 +288,19 @@ ShellRoot {
 
         implicitWidth: row.implicitWidth + 22
         implicitHeight: 34
-        rotation: tilt
         scale: area.containsMouse ? 1.08 : 1
         Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutBack } }
 
-        Rectangle {
-            x: 4; y: 4
-            width: parent.width; height: parent.height
-            color: root.red
-            antialiasing: true
-        }
-        Rectangle {
+        Card {
             anchors.fill: parent
-            color: chip.hot || area.containsMouse ? root.red : root.ink
-            border.color: root.paper
-            border.width: 3
-            antialiasing: true
+            tilt: chip.tilt
+            fill: chip.hot || area.containsMouse ? root.red : root.ink
         }
 
         RowLayout {
             id: row
             anchors.centerIn: parent
+            rotation: chip.tilt
             spacing: 4
 
             Icon {
@@ -470,21 +511,18 @@ ShellRoot {
                         Layout.leftMargin: 6
                         implicitWidth: Math.max(0, Math.min(titleText.implicitWidth + 22, room))
                         implicitHeight: 26
-                        rotation: -2
 
-                        Rectangle {
-                            x: 3; y: 3
-                            width: parent.width; height: parent.height
-                            color: root.red
-                        }
-                        Rectangle {
+                        Card {
                             anchors.fill: parent
-                            color: root.paper
-                            antialiasing: true
+                            tilt: -2
+                            fill: root.paper
+                            outlineWidth: 0
+                            shadowOffset: 3
                         }
                         Text {
                             id: titleText
                             anchors { fill: parent; leftMargin: 11; rightMargin: 11 }
+                            rotation: -2
                             verticalAlignment: Text.AlignVCenter
                             elide: Text.ElideRight
                             text: (Hyprland.activeToplevel?.title ?? "").toUpperCase()
@@ -553,10 +591,10 @@ ShellRoot {
                     }
                 }
 
-                // right: tray, volume, battery, notifications, power
+                // right: tray, network/bluetooth, volume, battery, power
                 RowLayout {
                     anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: 4 }
-                    spacing: 10
+                    spacing: 16
 
                     Repeater {
                         model: SystemTray.items
@@ -590,6 +628,53 @@ ShellRoot {
                         }
                     }
 
+                    // wifi: left click = network settings, right click = wifi on/off
+                    Chip {
+                        readonly property var devs: Networking.devices.values
+                        readonly property var wired: devs.find(d => d.type === DeviceType.Wired && d.connected)
+                        readonly property var wifiNet: {
+                            for (const d of devs)
+                                if (d.type === DeviceType.Wifi)
+                                    for (const n of d.networks.values)
+                                        if (n.connected) return n;
+                            return null;
+                        }
+                        visible: Networking.backend !== NetworkBackendType.None
+                        readonly property real strength: { const v = wifiNet?.signalStrength ?? 0; return v > 1 ? v / 100 : v; }
+                        tilt: 2
+                        hot: !wired && !wifiNet
+                        icon: wired ? "lan" : !Networking.wifiEnabled ? "wifi_off" : !wifiNet ? "signal_wifi_bad"
+                            : strength > 0.75 ? "signal_wifi_4_bar" : strength > 0.5 ? "network_wifi_3_bar"
+                            : strength > 0.25 ? "network_wifi_2_bar" : "network_wifi_1_bar"
+                        label: wired ? "LAN" : !Networking.wifiEnabled ? "OFF" : !wifiNet ? "NO NET"
+                            : wifiNet.name.length > 10 ? wifiNet.name.slice(0, 9).toUpperCase() + "…" : wifiNet.name.toUpperCase()
+                        onClicked: mouse => {
+                            if (mouse.button === Qt.RightButton)
+                                Networking.wifiEnabled = !Networking.wifiEnabled;
+                            else
+                                root.openSettings("network");
+                        }
+                    }
+
+                    // bluetooth: left click = bluetooth settings, right click = adapter on/off
+                    Chip {
+                        readonly property var adapter: Bluetooth.defaultAdapter
+                        readonly property var conn: adapter ? adapter.devices.values.filter(d => d.connected) : []
+                        visible: adapter !== null
+                        tilt: -2
+                        icon: !adapter?.enabled ? "bluetooth_disabled" : conn.length ? "bluetooth_connected" : "bluetooth"
+                        label: !adapter?.enabled ? "OFF" : conn.length === 1
+                            ? (conn[0].name.length > 10 ? conn[0].name.slice(0, 9).toUpperCase() + "…" : conn[0].name.toUpperCase())
+                            : conn.length > 1 ? `${conn.length} DEV` : "ON"
+                        onClicked: mouse => {
+                            if (mouse.button === Qt.RightButton) {
+                                if (adapter) adapter.enabled = !adapter.enabled;
+                            } else {
+                                root.openSettings("bluetooth");
+                            }
+                        }
+                    }
+
                     Chip {
                         readonly property var audio: Pipewire.defaultAudioSink?.audio
                         readonly property int pct: Math.round((audio?.volume ?? 0) * 100)
@@ -617,12 +702,6 @@ ShellRoot {
                         hot: pct <= 15 && !charging
                         icon: charging ? "bolt" : pct > 15 ? "battery_full" : "battery_alert"
                         label: hot ? `LOW!! ${pct}%` : `${pct}%`
-                    }
-
-                    Chip {
-                        tilt: -2
-                        icon: "notifications"
-                        onClicked: root.caelestia(["shell", "drawers", "toggle", "sidebar"])
                     }
 
                     Item {

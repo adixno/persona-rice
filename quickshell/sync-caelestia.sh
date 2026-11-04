@@ -7,7 +7,7 @@
 # Run after every caelestia-shell update, then restart the shell.
 set -euo pipefail
 
-here="$HOME/.config/quickshell"
+here="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
 src=/etc/xdg/quickshell/caelestia
 dst="$here/caelestia"
 bar_height=50 # keep in sync with barHeight in persona-bar/shell.qml

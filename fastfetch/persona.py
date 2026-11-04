@@ -71,51 +71,53 @@ def slash_at(x, y):
     return 0
 
 # ── frame ───────────────────────────────────────────────────────────────────────
-def canvas(t=0.0):
-    px = [[None] * PW for _ in range(PH)]
-    # halftone dots drifting in the corners
+@functools.cache
+def _static():
+    """Everything that is the same every frame, worked out once."""
+    dots, slash, polar, mask = [], [], [], []
     for y in range(PH):
         for x in range(PW):
-            if (x + y) % 2 or y % 2:
-                continue
-            corner = max(0.0, (math.hypot(x - CX, y - CY) - 16) / 10)
-            wave = 0.5 + 0.5 * math.sin(x * 0.4 - y * 0.3 + t * 2)
-            if corner * (0.6 + 0.4 * wave) > 0.5:
-                px[y][x] = mix(RED_D, RED, wave * 0.6)
-    # slash behind everything else
-    for y in range(PH):
-        for x in range(PW):
+            if not ((x + y) % 2 or y % 2):                     # halftone dot grid
+                corner = max(0.0, (math.hypot(x - CX, y - CY) - 16) / 10)
+                if corner > 0.5:                               # can ever pass the threshold below
+                    dots.append((x, y, corner))
             s = slash_at(x, y)
             if s:
-                px[y][x] = WHT if s == 2 else BLK
-    # starburst
-    flash = (t % 3.2) < 0.18                                   # eye flash every few seconds
-    for y in range(PH):
-        for x in range(PW):
+                slash.append((x, y, WHT if s == 2 else BLK))
             dx, dy = x + 0.5 - CX, y + 0.5 - CY
             d = math.hypot(dx, dy)
-            r = burst_r(math.atan2(dy, dx), t)
-            if d < r:
-                c = RED
-                if d > r - 1.3:
-                    c = BLK                                    # outline
-                elif d > r * 0.62 and (x + y) % 2 == 0 and y % 2 == 0:
-                    c = RED_D                                  # halftone shading
-                elif d < 9 and (x * 3 + y) % 11 == 0:
-                    c = RED_HI
-                px[y][x] = c
-    # mask with outline + drop shadow
-    for y in range(PH):
-        for x in range(PW):
+            if d < R_OUT + 0.5:                                # could be inside the burst
+                polar.append((x, y, d, math.atan2(dy, dx),
+                              (x + y) % 2 == 0 and y % 2 == 0, d < 9 and (x * 3 + y) % 11 == 0))
             m = mask_at(x, y)
             if m == 1:
                 shade = WHT if (y + 0.5 - CY) < 1 else mix(WHT, GREY, 0.6)
                 edge = any(mask_at(x + a, y + b) == 0 for a, b in ((1, 0), (-1, 0), (0, 1), (0, -1)))
-                px[y][x] = BLK if edge else shade
-            elif m == 2:
-                px[y][x] = BLK
-            elif mask_at(x - 1, y - 1) == 1:
-                px[y][x] = BLK                                 # offset shadow
+                mask.append((x, y, BLK if edge else shade))
+            elif m == 2 or mask_at(x - 1, y - 1) == 1:         # eye holes, offset shadow
+                mask.append((x, y, BLK))
+    return dots, slash, polar, mask
+
+def canvas(t=0.0):
+    dots, slash, polar, mask = _static()
+    px = [[None] * PW for _ in range(PH)]
+    # halftone dots drifting in the corners
+    for x, y, corner in dots:
+        wave = 0.5 + 0.5 * math.sin(x * 0.4 - y * 0.3 + t * 2)
+        if corner * (0.6 + 0.4 * wave) > 0.5:
+            px[y][x] = mix(RED_D, RED, wave * 0.6)
+    # slash behind everything else
+    for x, y, c in slash:
+        px[y][x] = c
+    # starburst
+    flash = (t % 3.2) < 0.18                                   # eye flash every few seconds
+    for x, y, d, theta, dotted, sparkle in polar:
+        r = burst_r(theta, t)
+        if d < r:
+            px[y][x] = BLK if d > r - 1.3 else RED_D if d > r * 0.62 and dotted else RED_HI if sparkle else RED
+    # mask with outline + drop shadow
+    for x, y, c in mask:
+        px[y][x] = c
     # glinting eyes: a red pupil slides along each slit
     for side in (-1, 1):
         ex = CX + side * 0.43 * MASK_S

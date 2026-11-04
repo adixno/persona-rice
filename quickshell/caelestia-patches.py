@@ -348,6 +348,33 @@ PATCHES.update({
     ],
 })
 
+# nexus: `caelestia shell nexus openPage network|bluetooth|...` opens settings on that page
+PATCHES.update({
+    "modules/Shortcuts.qml": [
+        (
+            "    IpcHandler {\n        function open(): void {\n            WindowFactory.create();\n        }\n",
+            "    IpcHandler {\n        function open(): void {\n            WindowFactory.create();\n        }\n"
+            "\n"
+            "        function openPage(page: string): void {\n"
+            "            const q = page.toLowerCase();\n"
+            "            const alias = { bluetooth: \"devices_other\", wifi: \"wifi\", network: \"wifi\" };\n"
+            "            const idx = PageRegistry.pages.findIndex(p => p.icon === alias[q] || p.label.toLowerCase().includes(q));\n"
+            "            WindowFactory.create(null, { startPage: Math.max(0, idx) });\n"
+            "        }\n",
+        ),
+    ],
+    "modules/nexus/WindowFactory.qml": [
+        (
+            "            id: win\n\n",
+            "            id: win\n\n            property int startPage: 0\n\n",
+        ),
+        (
+            "                nState.isWindow: true\n",
+            "                nState.isWindow: true\n                nState.currentPageIdx: win.startPage\n",
+        ),
+    ],
+})
+
 for rel, edits in PATCHES.items():
     path = root / rel
     text = path.read_text()

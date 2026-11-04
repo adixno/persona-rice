@@ -8,7 +8,11 @@ here=$(cd "$(dirname "$0")" && pwd)
 cfg=${XDG_CONFIG_HOME:-$HOME/.config}
 backup="$HOME/.local/share/persona-rice/backup-$(date +%Y%m%d-%H%M%S)"
 only_greeting=0
-[[ ${1:-} == --greeting ]] && only_greeting=1
+case ${1:-} in
+    "") ;;
+    --greeting) only_greeting=1 ;;
+    *) echo "usage: $0 [--greeting]" >&2; exit 2 ;;
+esac
 
 say() { printf '\e[1;37;41m P \e[0m %s\n' "$*"; }
 warn() { printf '\e[1;30;47m ! \e[0m %s\n' "$*"; }
@@ -35,6 +39,20 @@ if ((${#missing[@]})); then
     warn "missing commands: ${missing[*]} (see README for packages)"
     exit 1
 fi
+if ((!only_greeting)); then
+    if [[ -z ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
+        warn "run this from inside a Hyprland session (or use --greeting)"
+        exit 1
+    fi
+    if [[ ! -d /etc/xdg/quickshell/caelestia ]]; then
+        warn "caelestia-shell not found at /etc/xdg/quickshell/caelestia; install it first"
+        exit 1
+    fi
+    families=$(fc-list : family)   # read once: `fc-list | grep -q` trips pipefail via SIGPIPE
+    for f in "Bebas Neue" "Antonio" "Material Symbols Sharp"; do
+        grep -qi "^$f" <<<"$families" || warn "font '$f' not installed; the bar will fall back to a default font"
+    done
+fi
 
 # ── terminal greeting ───────────────────────────────────────────────────────────
 say "terminal greeting"
@@ -59,10 +77,18 @@ put "$here/caelestia/persona-dark.txt" "$cfg/caelestia/persona-dark.txt"
 # hide Caelestia's own bar on every monitor (persona-bar replaces it)
 mons=$(hyprctl monitors -j | python3 -c 'import json,sys; print(json.dumps([m["name"] for m in json.load(sys.stdin)]))')
 tmp=$(mktemp)
-python3 - "$here/caelestia/shell.json" "$mons" >"$tmp" <<'EOF'
-import json, sys
-d = json.load(open(sys.argv[1]))
-d.setdefault("bar", {})["excludedScreens"] = json.loads(sys.argv[2])
+python3 - "$here/caelestia/shell.json" "$cfg/caelestia/shell.json" "$mons" >"$tmp" <<'EOF'
+import json, os, sys
+
+def merge(base, extra):
+    for k, v in extra.items():
+        base[k] = merge(base.get(k, {}), v) if isinstance(v, dict) and isinstance(base.get(k), dict) else v
+    return base
+
+ours = json.load(open(sys.argv[1]))
+theirs = json.load(open(sys.argv[2])) if os.path.exists(sys.argv[2]) else {}
+d = merge(theirs, ours)                       # keep their settings, ours win on conflicts
+d.setdefault("bar", {})["excludedScreens"] = json.loads(sys.argv[3])
 print(json.dumps(d, indent=2))
 EOF
 put "$tmp" "$cfg/caelestia/shell.json"
@@ -86,7 +112,10 @@ put "$here/quickshell/caelestia-overlay" "$cfg/quickshell/caelestia-overlay"
 put "$here/quickshell/caelestia-patches.py" "$cfg/quickshell/caelestia-patches.py"
 put "$here/quickshell/sync-caelestia.sh" "$cfg/quickshell/sync-caelestia.sh"
 chmod +x "$cfg/quickshell/sync-caelestia.sh"
-"$cfg/quickshell/sync-caelestia.sh"
+if ! "$cfg/quickshell/sync-caelestia.sh"; then
+    warn "Caelestia patches don't match your caelestia-shell version; it will run unpatched"
+    warn "(stock lock screen and notifications; the bar and colours still work)"
+fi
 
 # ── wallpaper + scheme (wallpaper first: changing it can regenerate the scheme) ──
 say "wallpaper"

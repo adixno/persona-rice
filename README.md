@@ -21,7 +21,7 @@ Built on **Hyprland + [Caelestia shell](https://github.com/caelestia-dots/shell)
 | `fastfetch/persona.py` | `~/.config/fastfetch/` | Animated half-block greeting: spinning starburst, white mask with glinting eyes, glitch intro. System info sits on the right. |
 | `fastfetch/persona.jsonc` | `~/.config/fastfetch/` | Red/white fastfetch layout used by the greeting |
 | `fish/conf.d/persona-greeting.fish` | `~/.config/fish/conf.d/` | Runs the greeting. It stops animating as soon as you run a command or the screen scrolls, and pauses while the window is unfocused. |
-| `quickshell/persona-bar/` | `~/.config/quickshell/` | Top bar with ransom-note workspace tiles, starburst stickers and a torn edge. Its colours come live from Caelestia's scheme. |
+| `quickshell/persona-bar/` | `~/.config/quickshell/` | Top bar with ransom-note workspace tiles, starburst stickers and a torn edge, plus Wi-Fi, Bluetooth, volume and battery buttons. Its colours come live from Caelestia's scheme. |
 | `quickshell/caelestia-overlay/`, `caelestia-patches.py`, `sync-caelestia.sh` | `~/.config/quickshell/` | Builds a patched user copy of Caelestia with a punk lock screen and notification cards. Your system package is never touched. |
 | `caelestia/` | `~/.config/caelestia/` | `persona` colour scheme, zero-rounding tokens, Bebas Neue / Antonio fonts |
 | `hypr/persona-look.{conf,lua}` | `~/.config/hypr/` | Red/white borders, red glow shadows, no rounding, autostart lines |
@@ -37,7 +37,10 @@ caelestia-shell caelestia-cli                    # AUR
 ttf-antonio otf-bebas-neue-git                   # AUR
 ttf-material-symbols-variable-git                # AUR
 noto-fonts ttf-jetbrains-mono-nerd
+networkmanager bluez pavucontrol                 # Wi-Fi/Bluetooth buttons, volume right-click
 ```
+
+Tested with Hyprland 0.56, Quickshell 0.3.2, caelestia-shell 2.5.0 and caelestia-cli 1.1.3. The Caelestia patches are tied to that version. If yours differs and a patch doesn't fit, the installer says so and Caelestia runs unpatched (stock lock screen and notifications). The bar, colours and greeting still work.
 
 The greeting needs a truecolor terminal (kitty, foot, wezterm, alacritty...) at least ~90 columns wide. Narrower windows get the plain info only.
 
@@ -71,6 +74,18 @@ caelestia shell -k && caelestia shell -d
 If an upstream change breaks a patch, the script stops and names the file and anchor that failed. Your working copy stays as it was, and the previous build is kept as `caelestia.prev`.
 
 If changing the wallpaper resets the colours, run `python3 ~/.config/caelestia/persona-scheme.py`.
+
+## Bar buttons
+
+| Button | Left click | Right click | Scroll |
+|---|---|---|---|
+| Network | Network settings | Wi-Fi on/off | |
+| Bluetooth | Bluetooth settings | Bluetooth on/off | |
+| Volume | Mute | pavucontrol | Volume |
+| Clock | Dashboard | | |
+| Power | Session menu | | |
+
+The network button needs NetworkManager and is hidden without it. For notifications, bind a key to `caelestia shell drawers toggle sidebar`.
 
 ## Tweaks
 
