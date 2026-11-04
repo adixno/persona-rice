@@ -404,6 +404,7 @@ ShellRoot {
 
             // red slash behind the clock
             Shape {
+                id: clockSlash
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: 4
                 width: 280; height: root.barHeight - 10
@@ -505,8 +506,8 @@ ShellRoot {
                     // window title on a torn white label
                     Item {
                         id: titleBox
-                        // never reach the clock: cap at the space left before it
-                        readonly property real room: clockBox.x - leftRow.x - x - 30
+                        // never reach the clock: stop before the red slash behind it
+                        readonly property real room: Math.min(clockSlash.x, clockBox.x) - leftRow.x - x - 14
                         visible: titleText.text !== "" && room > 60
                         Layout.leftMargin: 6
                         implicitWidth: Math.max(0, Math.min(titleText.implicitWidth + 22, room))
