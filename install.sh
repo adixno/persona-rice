@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Install the Persona rice. Anything it would overwrite is backed up first.
-#   ./install.sh               everything (terminal greeting + Caelestia theme + bar + wallpaper)
-#   ./install.sh --greeting    only the fish/fastfetch terminal greeting
+#   ./install.sh               everything (terminal + Caelestia theme + bar + wallpaper)
+#   ./install.sh --terminal    only the terminal: greeting, prompt, fish/fzf colours, kitty palette
+#                              (--greeting is an old name for the same thing)
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -10,8 +11,8 @@ backup="$HOME/.local/share/persona-rice/backup-$(date +%Y%m%d-%H%M%S)"
 only_greeting=0
 case ${1:-} in
     "") ;;
-    --greeting) only_greeting=1 ;;
-    *) echo "usage: $0 [--greeting]" >&2; exit 2 ;;
+    --terminal | --greeting) only_greeting=1 ;;
+    *) echo "usage: $0 [--terminal]" >&2; exit 2 ;;
 esac
 
 say() { printf '\e[1;37;41m P \e[0m %s\n' "$*"; }
@@ -41,7 +42,7 @@ if ((${#missing[@]})); then
 fi
 if ((!only_greeting)); then
     if [[ -z ${HYPRLAND_INSTANCE_SIGNATURE:-} ]]; then
-        warn "run this from inside a Hyprland session (or use --greeting)"
+        warn "run this from inside a Hyprland session (or use --terminal)"
         exit 1
     fi
     if [[ ! -d /etc/xdg/quickshell/caelestia ]]; then
@@ -62,6 +63,31 @@ put "$here/fish/conf.d/persona-greeting.fish" "$cfg/fish/conf.d/persona-greeting
 if grep -qs 'function fish_greeting' "$cfg/fish/config.fish"; then
     warn "your config.fish defines its own fish_greeting, which overrides this one; remove it to see the greeting"
 fi
+
+# ── terminal look: starship prompt, fish/fzf colours, kitty palette ─────────────
+say "terminal colours + prompt"
+put "$here/fish/conf.d/persona-colors.fish" "$cfg/fish/conf.d/persona-colors.fish"
+if grep -qsE '^\s*set .*(fish_color_|FZF_DEFAULT_OPTS)' "$cfg/fish/config.fish"; then
+    warn "your config.fish sets its own fish/fzf colours, which override persona-colors.fish"
+fi
+put "$here/starship/starship.toml" "$cfg/starship.toml"
+if command -v starship >/dev/null; then
+    grep -qs 'starship init fish' "$cfg/fish/config.fish" ||
+        warn "add 'starship init fish | source' to your config.fish to use the prompt"
+else
+    warn "starship not installed; the prompt theme is in place for when it is"
+fi
+put "$here/kitty/persona.conf" "$cfg/kitty/themes/persona.conf"
+if ! grep -qsx 'include themes/persona.conf' "$cfg/kitty/kitty.conf"; then
+    # last include wins, so appending overrides any earlier theme without deleting it
+    if [[ -e $cfg/kitty/kitty.conf ]]; then
+        mkdir -p "$backup/${cfg#"$HOME"/}/kitty"
+        cp -a "$cfg/kitty/kitty.conf" "$backup/${cfg#"$HOME"/}/kitty/kitty.conf"
+    fi
+    mkdir -p "$cfg/kitty"
+    printf '\n# persona-rice terminal palette\ninclude themes/persona.conf\n' >>"$cfg/kitty/kitty.conf"
+fi
+pkill -USR1 -x kitty 2>/dev/null || true   # live-reload open kitty windows
 
 if ((only_greeting)); then
     say "done. open a new fish terminal."

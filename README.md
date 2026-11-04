@@ -21,6 +21,9 @@ Built on **Hyprland + [Caelestia shell](https://github.com/caelestia-dots/shell)
 | `fastfetch/persona.py` | `~/.config/fastfetch/` | Animated half-block greeting: spinning starburst, white mask with glinting eyes, glitch intro. System info sits on the right. |
 | `fastfetch/persona.jsonc` | `~/.config/fastfetch/` | Red/white fastfetch layout used by the greeting |
 | `fish/conf.d/persona-greeting.fish` | `~/.config/fish/conf.d/` | Runs the greeting. It stops animating as soon as you run a command or the screen scrolls, and pauses while the window is unfocused. |
+| `fish/conf.d/persona-colors.fish` | `~/.config/fish/conf.d/` | Fish syntax colours (red commands, white arguments, gold strings) and a sharp red fzf theme |
+| `starship/starship.toml` | `~/.config/starship.toml` | Prompt: user on a slanted red label, folder on a white one, `▶▶` input line |
+| `kitty/persona.conf` | `~/.config/kitty/themes/` | Ink / paper / red terminal palette with a red cursor and tabs. The installer adds an `include` line to `kitty.conf`. |
 | `quickshell/persona-bar/` | `~/.config/quickshell/` | Top bar with ransom-note workspace tiles, starburst stickers and a torn edge, plus Wi-Fi, Bluetooth, volume and battery buttons. Its colours come live from Caelestia's scheme. |
 | `quickshell/caelestia-overlay/`, `caelestia-patches.py`, `sync-caelestia.sh` | `~/.config/quickshell/` | Builds a patched user copy of Caelestia with a punk lock screen and notification cards. Your system package is never touched. |
 | `caelestia/` | `~/.config/caelestia/` | `persona` colour scheme, zero-rounding tokens, Bebas Neue / Antonio fonts |
@@ -33,6 +36,7 @@ Arch / CachyOS package names (AUR marked):
 
 ```
 hyprland quickshell fastfetch fish python
+starship kitty                                   # prompt + terminal palette (optional)
 caelestia-shell caelestia-cli                    # AUR
 ttf-antonio otf-bebas-neue-git                   # AUR
 ttf-material-symbols-variable-git                # AUR
@@ -50,7 +54,7 @@ The greeting needs a truecolor terminal (kitty, foot, wezterm, alacritty...) at 
 git clone https://github.com/adixno/persona-rice
 cd persona-rice
 ./install.sh              # everything
-./install.sh --greeting   # just the terminal greeting
+./install.sh --terminal   # just the terminal: greeting, prompt, colours
 ```
 
 The installer backs up every file it replaces to `~/.local/share/persona-rice/backup-<date>/`. It does **not** edit your Hyprland config. Add the look yourself:
@@ -90,13 +94,13 @@ The network button needs NetworkManager and is hidden without it. For notificati
 ## Tweaks
 
 - **Preview the greeting** without opening a terminal: `python3 ~/.config/fastfetch/persona.py --still`
-- **Colours:** `RED`, `BLK`, `WHT` at the top of `persona.py`, and `persona-dark.txt` / `persona-scheme.py` for the shell
+- **Colours:** `RED`, `BLK`, `WHT` at the top of `persona.py`, `persona-dark.txt` / `persona-scheme.py` for the shell, and `[palettes.persona]` in `starship.toml` for the prompt
 - **Bar height:** `barHeight` in `persona-bar/shell.qml` *and* `bar_height` in `sync-caelestia.sh`. Keep them equal.
 - **Fractional scaling:** slanted shapes use `Shape.CurveRenderer` (`components/punk/Slab.qml`). Rotated rectangles look jagged at 1.5x.
 
 ## Uninstall
 
-Restore files from the backup folder. Also delete `~/.config/quickshell/{persona-bar,caelestia,caelestia-overlay}` and `~/.config/fish/conf.d/persona-greeting.fish`, then run `caelestia shell -k && caelestia shell -d`.
+Restore files from the backup folder. Also delete `~/.config/quickshell/{persona-bar,caelestia,caelestia-overlay}` `~/.config/fish/conf.d/persona-{greeting,colors}.fish` and `~/.config/kitty/themes/persona.conf` (plus its `include` line in `kitty.conf`), then run `caelestia shell -k && caelestia shell -d`.
 
 ## License
 
