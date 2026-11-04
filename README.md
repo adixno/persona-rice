@@ -6,9 +6,13 @@ Built on **Hyprland + [Caelestia shell](https://github.com/caelestia-dots/shell)
 
 > Fan-made and unofficial. Not affiliated with or endorsed by Atlus or SEGA. Every graphic here is original and drawn in code. It contains no game assets.
 
-| Terminal greeting | Wallpapers |
+![terminal](preview/terminal.jpg)
+
+| Desktop + bar | Lock screen |
 |---|---|
-| ![greeting](preview/greeting.png) | ![red slash](preview/red-slash.png) ![punk collage](preview/punk-collage.png) |
+| ![desktop](preview/desktop.jpg) | ![lock](preview/lock.jpg) |
+| **Notifications** | **Wallpapers** |
+| ![notification](preview/notification.jpg) | ![red slash](preview/red-slash.png) ![punk collage](preview/punk-collage.png) |
 
 ## What's inside
 
