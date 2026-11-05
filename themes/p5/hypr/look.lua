@@ -1,4 +1,5 @@
--- Persona look for Hyprland's Lua config (hl.config). Source this after your own decorations.
+-- Persona 5 window look for Hyprland's Lua config. persona-theme installs it as
+-- ~/.config/hypr/config/persona_theme.lua; require it after your own decorations.
 local P_RED   = "rgba(e60012ff)"
 local P_WHITE = "rgba(f4f4f4ff)"
 local P_INK   = "rgba(1a1a1aee)"
@@ -22,8 +23,3 @@ hl.config({
         shadow = { enabled = true, range = 22, render_power = 2, color = P_GLOW, color_inactive = "rgba(00000066)" },
     },
 })
-
-hl.on("hyprland.start", function ()
-    hl.exec_cmd("caelestia shell -d")
-    hl.exec_cmd("qs -c persona-bar -n -d")
-end)

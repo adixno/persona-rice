@@ -10,7 +10,9 @@ set -euo pipefail
 here="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
 src=/etc/xdg/quickshell/caelestia
 dst="$here/caelestia"
-bar_height=50 # keep in sync with barHeight in persona-bar/shell.qml
+# reserve space for the active theme's bar (barHeight in persona-bar/shell.qml)
+bar_height=$(sed -n 's/.*readonly property int barHeight: *\([0-9]\+\).*/\1/p' "$here/persona-bar/shell.qml" 2>/dev/null | head -1)
+bar_height=${bar_height:-50}
 
 tmp=$(mktemp -d "$here/.caelestia-build.XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
