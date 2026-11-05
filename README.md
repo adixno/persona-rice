@@ -14,6 +14,8 @@ Built on **Hyprland + [Caelestia shell](https://github.com/caelestia-dots/shell)
 | **Notifications** | **Wallpapers** |
 | ![notification](preview/notification.jpg) | ![red slash](preview/red-slash.png) ![punk collage](preview/punk-collage.png) |
 
+![login screen](preview/login.jpg)
+
 ## What's inside
 
 | Part | Where it goes | What it does |
@@ -28,6 +30,7 @@ Built on **Hyprland + [Caelestia shell](https://github.com/caelestia-dots/shell)
 | `quickshell/caelestia-overlay/`, `caelestia-patches.py`, `sync-caelestia.sh` | `~/.config/quickshell/` | Builds a patched user copy of Caelestia with a punk lock screen and notification cards. Your system package is never touched. |
 | `caelestia/` | `~/.config/caelestia/` | `persona` colour scheme, zero-rounding tokens, Bebas Neue / Antonio fonts |
 | `hypr/persona-look.{conf,lua}` | `~/.config/hypr/` | Red/white borders, red glow shadows, no rounding, autostart lines |
+| `sddm/persona/` | `/usr/share/sddm/themes/` | SDDM login screen: cut-paper ransom title, circle-A scrawl, slanted login slabs, poster clock with a ransom day and typewriter date, photocopy grain. Installed separately with `sddm/install.sh`. |
 | `wallpapers/` | `~/Pictures/Wallpapers/` | Two 4K wallpapers |
 
 ## Requirements
@@ -97,6 +100,21 @@ The network button needs NetworkManager and is hidden without it. For notificati
 - **Colours:** `RED`, `BLK`, `WHT` at the top of `persona.py`, `persona-dark.txt` / `persona-scheme.py` for the shell, and `[palettes.persona]` in `starship.toml` for the prompt
 - **Bar height:** `barHeight` in `persona-bar/shell.qml` *and* `bar_height` in `sync-caelestia.sh`. Keep them equal.
 - **Fractional scaling:** slanted shapes use `Shape.CurveRenderer` (`components/punk/Slab.qml`). Rotated rectangles look jagged at 1.5x.
+
+## Login screen (SDDM)
+
+Optional, and separate from `install.sh` because it needs root:
+
+```sh
+sudo ./sddm/install.sh            # install sddm + the theme; your current login manager is untouched
+sddm-greeter-qt6 --test-mode --theme /usr/share/sddm/themes/persona   # preview it in a window
+sudo ./sddm/install.sh --enable   # switch from greetd to sddm (takes effect next boot)
+sudo ./sddm/install.sh --revert   # back to greetd
+```
+
+The background is `wallpapers/red-slash.png` unless you put your own picture at `sddm/persona/background.png` before installing. Colours are in `sddm/persona/theme.conf`. Re-run `sudo ./sddm/install.sh` after editing the theme.
+
+If your Caelestia autostart sets `CAELESTIA_LOCK_ON_START=1`, drop it, or you'll get the lock screen right after logging in.
 
 ## Uninstall
 

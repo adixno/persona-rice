@@ -1,0 +1,11 @@
+[SddmGreeterTheme]
+Name=Persona
+Description=Red/black/white punk ransom-note login, matching the Persona rice
+Author=adi
+Version=1.0
+Type=sddm-theme
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=persona
+Theme-API=2.0
+QtVersion=6
