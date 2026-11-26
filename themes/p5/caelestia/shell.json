@@ -95,5 +95,8 @@
       "occupiedBg": true
     },
     "excludedScreens": []
+  },
+  "background": {
+    "wallpaperEnabled": true
   }
 }

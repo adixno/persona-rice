@@ -44,7 +44,7 @@ only_terminal=0
 [[ ${2:-} == --terminal ]] && only_terminal=1
 t=$themes/$id
 [[ $id =~ ^[a-z0-9-]+$ && -f $t/theme.sh ]] || { warn "no theme '$id'"; list; exit 1; }
-NAME= SCHEME= WALLPAPER=
+NAME= SCHEME= WALLPAPER= AUTOSTART=
 source "$t/theme.sh"
 
 # ── terminal ─────────────────────────────────────────────────────────────────
@@ -103,6 +103,11 @@ say "$NAME: bar + lock screen"
 put "$t/quickshell/persona-bar" "$cfg/quickshell/persona-bar"
 put "$t/quickshell/caelestia-overlay" "$cfg/quickshell/caelestia-overlay"
 put "$t/quickshell/caelestia-patches.py" "$cfg/quickshell/caelestia-patches.py"
+for extra in "$t"/quickshell/*/; do
+    name=$(basename "$extra")
+    case $name in persona-bar | caelestia-overlay) continue ;; esac
+    put "$extra" "$cfg/quickshell/$name"
+done
 "$cfg/quickshell/sync-caelestia.sh" ||
     warn "Caelestia patches didn't apply; it will run unpatched"
 
@@ -150,7 +155,11 @@ echo "$id" >"$state/current"
 say "$NAME: restarting shells"
 caelestia shell -k >/dev/null 2>&1 || true
 pkill -f '^qs -c persona-bar' 2>/dev/null || true
+pkill -f '^qs -c p[0-9]+-' 2>/dev/null || true   # previous theme's own extras (p3-hud, ...)
 sleep 1
 caelestia shell -d >/dev/null 2>&1
 qs -c persona-bar -n -d >/dev/null 2>&1
+for cmd in "${AUTOSTART[@]}"; do
+    setsid -f sh -c "$cmd" >/dev/null 2>&1
+done
 say "switched to $NAME. new terminals pick up the prompt and greeting."
